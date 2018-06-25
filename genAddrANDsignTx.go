@@ -207,7 +207,7 @@ func RecoverPubkey(msg []byte, sig []byte) ([]byte, error) {
 	return pubkey, nil
 }
 
-// VerifySignature用来验证对应公钥的签名，签名为[R || S] 格式.
+// VerifySignature函数用来验证对应公钥的签名，签名为[R || S] 格式.
 func VerifySignature(pubkey, msg, signature []byte) bool {
 	if len(msg) != 32 || len(signature) != 64 || len(pubkey) == 0 {
 		return false
