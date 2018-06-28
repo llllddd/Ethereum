@@ -36,7 +36,7 @@
 ## 椭圆曲线数字签名算法
 以太坊中使用的数字签名算法为椭圆曲线数字签名算法(Elliptic Curve Digital Signature Algorithm,ECDSA),椭圆曲线签名算法同样依赖于生成的密钥对<img src="https://latex.codecogs.com/png.latex?\inline&space;\dpi{100}&space;(sk,PK)">.以太坊中的数字签名有三个目的：首先，签名证明了私钥的所有者，它是隐含的帐户的所有者，表明了以太币支出，或合同的执行是经过授权的。第二，证明了授权是不可抵赖的。第三，防止交易数据在交易完成后被篡改。同时，数字签名的数学方案有两部分组成
 ### 计算签名：
-设私钥为<img src="https://latex.codecogs.com/png.latex?\inline&space;\dpi{100}&space;sk">，公钥为<img src="https://latex.codecogs.com/png.latex?\inline&space;\dpi{100}&space;PK=sk*G">，椭圆曲线参数<img src="https://latex.codecogs.com/png.latex?\inline&space;\dpi{100}&space;(Curve,G,n) ,nG=O">
+设私钥为<img src="https://latex.codecogs.com/png.latex?\inline&space;\dpi{100}&space;sk">，公钥为<img src="https://latex.codecogs.com/png.latex?\inline&space;\dpi{100}&space;PK=sk*G">，椭圆曲线参数 <img src="https://latex.codecogs.com/png.latex?\inline&space;\dpi{100}&space;(Curve,G,n),n*G=0">
 
 使用私钥进行签名
 
