@@ -167,7 +167,7 @@ func (a *Address) SetBytes(b []byte) {
 	
 3. 计算Keaccak256 hash值
 	
-4. 使用私钥对hash值签名 <img src="https://latex.codecogs.com/png.latex?\inline&space;\dpi{100}&space;Sig=F_{sig}(F_{keccak256}(m),sk), Sig = (R,S)">
+4. 使用私钥对hash值签名 <img src="https://latex.codecogs.com/png.latex?\inline&space;\dpi{100}&space;Sig=F_{sig}(F_{keccak256}(m),sk),Sig=(R,S)">
 
 ### 相关代码
 
