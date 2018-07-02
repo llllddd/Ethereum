@@ -15,6 +15,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
@@ -24,7 +25,6 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"io"
 	"math/big"
-	"os"
 )
 
 //输入初始随机数生成私钥包含 加密的椭圆曲线，公钥， 私钥
@@ -104,8 +104,10 @@ func main() {
 		big.NewInt(0), 0, big.NewInt(0),
 		nil)
 
-	v, _ := genAccountSek(os.Stdin)
-	fmt.Println(v)
+	seed := []byte{111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111}
+	bytesBuffer := bytes.NewBuffer(seed)
+	v, _ := genAccountSek(bytesBuffer)
+	fmt.Println("PrivateKey机构体", v)
 	sk := getNormalSk(v)
 	fmt.Println("私钥：", common.ToHex(sk))
 	addr := genAddressFromPub(v.PublicKey)
@@ -117,4 +119,3 @@ func main() {
 	b := verifySignedTx(txhash, signtx)
 	fmt.Println("验证交易：", b)
 }
-
