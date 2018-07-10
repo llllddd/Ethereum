@@ -116,31 +116,27 @@ func genAddressFromPub(pk *ecdsa.PublicKey) Address {
 
 //字符串进制转换
 
-/*
-//对交易信息进行hash运算算法为Keccak256
-func hashTxByKeccak256(tx *types.Transaction) ([]byte, error) {
-	var v []byte
-	v, err := rlp.EncodeToBytes(tx)
-	if err != nil {
-		return nil, err
-	} else {
-		haTx := crypto.Keccak256(v)
-		return haTx, nil
-	}
-}
+//对交易单编组转换为byte
 
-//对交易的hash值用椭圆曲线算法签名
-func signTxBySecp256k1(tx *types.Transaction, sk []byte) ([]byte, error) {
-	Txhash, err := hashTxByKeccak256(tx)
-	if err != nil {
-		return nil, err
-	}
+//对hash值做椭圆曲线签名算法
+func signBySecp256k1(msg []byte, sk []byte)([]byte,error){
 	signedTx, err := secp256k1.Sign(Txhash, sk)
 	if err != nil {
 		return nil, err
 	} else {
 		return signedTx, nil
+	}	
+}
+
+//从交易签名中恢复公钥
+func RecoverTxsignPubkey(txhash []byte,txsign []byte)([]byte,error){
+	pk,err := secp256k1.RecoverPubkey(txhash,txsign)
+	if err!=nil{
+		return nil,err
+	}else{
+		retrun pk,nil
 	}
+
 }
 
 //验证交易签名,签名为(R||S||V)65bytes
@@ -149,10 +145,10 @@ func verifySignedTx(txhash []byte, txsign []byte) bool {
 	if err != nil || len(txhash) != 32 {
 		return false
 	}
-	bb := secp256k1.VerifySignature(pubkey, txhash, txsign[0:64])
-	return bb
+	result := secp256k1.VerifySignature(pubkey, txhash, txsign[0:64])
+	return result
 }
-*/
+
 func main() {
 	seed := []byte{110, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111}
 	bytesBuffer := bytes.NewBuffer(seed)

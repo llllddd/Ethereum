@@ -18,18 +18,19 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"fmt"
+	"io"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/ethereum/go-ethereum/rlp"
-	"io"
-	"math/big"
 )
 
 //输入初始随机数生成私钥包含 加密的椭圆曲线，公钥， 私钥
 func genAccountSek(rand io.Reader) (*ecdsa.PrivateKey, error) {
-	privateKeyECDSA, err := ecdsa.GenerateKey(crypto.S256(), rand)
+	privateKeyECDSA, err := ecdsa.GenerateKey(secp256k1.S256(), rand)
 	if err != nil {
 		return nil, err
 	}
@@ -104,10 +105,10 @@ func main() {
 		big.NewInt(0), 0, big.NewInt(0),
 		nil)
 
-	seed := []byte{111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111}
+	seed := []byte{110, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111}
 	bytesBuffer := bytes.NewBuffer(seed)
 	v, _ := genAccountSek(bytesBuffer)
-	fmt.Println("PrivateKey机构体", v)
+	fmt.Println("PrivateKey结构体", v)
 	sk := getNormalSk(v)
 	fmt.Println("私钥：", common.ToHex(sk))
 	addr := genAddressFromPub(v.PublicKey)
