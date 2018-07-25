@@ -1,67 +1,61 @@
 package main
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"math/big"
-
+	"strings"
 	"sdk/sha3"
-
+	"encoding/binary"
 	"github.com/go-ethereum-hdwallet"
 	bip39 "github.com/tyler-smith/go-bip39"
+	"github.com/tyler-smith/go-bip39/wordlists"
 )
 
-/*
+
+
 func Mnemonic(entropy []byte)(string,error){
 	//计算随机数的比特长要满足在128~256比特间且满足能被32整除
 	entropyLength := len(entropy)*8
 	if(entropyLength%32) !=0 || entropyLength >256 || entropyLength <128{
-		return nil,err
+		fmt.Println("ERROR")
 	}
 	//在随机数之后要加上校验和以验证完整性，校验和的长度为字节数除以4，即比特数除以32。
 	checkSumLength:= entropyLength/32
 	//助记码是将随机数分组，每组11比特，分组的数量也是助记码中单词的数量。
-	mnemonicCodeLength := entropyLength/11
+	mnemonicCodeLength := (entropyLength+checkSumLength)/11
 	//使用SHA256算法计算随机数的hash值，并将HASH值的前8比特加到随机数之后作为校验和。
 	entropy = addCheckSum(entropy)
+	//将添加了校验码的随机数分组,每组11比特
+	entropyInt := new(big.Int).SetBytes(entropy)
 
+	words := make([]string,mnemonicCodeLength)
 
+	word := big.NewInt(0)
+	last11bitmask := big.NewInt(2047)
+	
+        wordList := wordlists.ChineseSimplified
+	for i:= mnemonicCodeLength - 1;i>=0;i--{
+		word.And(entropyInt, last11bitmask)
+		entropyInt.Div(entropyInt, big.NewInt(2048))
 
+		wordBytes := padByteSlice(word.Bytes(),2)
 
-
-
-
-
-}
-*/
-func addChecksum1(data []byte) []byte {
-	// Get first byte of sha256
-	hasher := sha256.New()
-	hasher.Write(data)
-	hash := hasher.Sum(nil)
-	firstChecksumByte := hash[0]
-
-	// len() is in bytes so we divide by 4
-	checksumBitLength := uint(len(data) / 4)
-
-	// For each bit of check sum we want we shift the data one the left
-	// and then set the (new) right most bit equal to checksum bit at that index
-	// staring from the left
-	dataBigInt := new(big.Int).SetBytes(data)
-	BigOne := big.NewInt(1)
-	BigTwo := big.NewInt(2)
-	for i := uint(0); i < checksumBitLength; i++ {
-		// Bitshift 1 left
-		dataBigInt.Mul(dataBigInt, BigTwo)
-
-		// Set rightmost bit if leftmost checksum bit is set
-		if uint8(firstChecksumByte&(1<<(7-i))) > 0 {
-			dataBigInt.Or(dataBigInt, BigOne)
-		}
+		words[i]=wordList[binary.BigEndian.Uint16(wordBytes)]
 	}
-	fmt.Println("SHA256Hash为:", hash)
-	return dataBigInt.Bytes()
+
+	return strings.Join(words," "),nil
 }
+
+func padByteSlice(slice []byte,length int)[]byte{
+	offset := length - len(slice)
+	if offset <= 0{
+		return slice
+	}
+	newSlice := make([]byte,length)
+	copy(newSlice[offset:],slice)
+	return newSlice
+}
+
 
 func addCheckSum(entropy []byte) []byte {
 	hasher := sha3.NewKeccak256()
@@ -69,10 +63,12 @@ func addCheckSum(entropy []byte) []byte {
 	hash := hasher.Sum(nil)
 	//校验和的比特数
 	checkSumLength := len(entropy) / 4
-
-	entropy = append(entropy, hash[:checkSumLength]...)
+	bytelength := checkSumLength/8
+	entropy = append(entropy, hash[:bytelength]...)
 	return entropy
 }
+
+
 
 func main() {
 	//256bitseed
@@ -81,8 +77,7 @@ func main() {
 	//生成助记码，种子为128~256比特
 	entropy, _ := bip39.NewEntropy(256)
 	//将生成的随机数转换为助记码
-	code, _ := bip39.NewMnemonic(entropy)
-	fmt.Println("种子", entropy, "对应的助记码为", code)
-	code1 := addChecksum1(entropy)
-	fmt.Println(code1)
+	code, _ := Mnemonic(entropy)
+	fmt.Println("种子", entropy)
+	fmt.Println("对应的助记码为", code)
 }

@@ -26,5 +26,4 @@ func main() {
 	fmt.Println(a)
 	b := key_store.Accounts()
 	fmt.Println(len(b))
-	fmt.Println(sk)
 }
