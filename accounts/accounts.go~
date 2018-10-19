@@ -1,0 +1,10 @@
+package accounts
+
+import (
+	"xchain-go/common"
+)
+
+type Account struct {
+	Address common.Address
+	URL     URL `json:"url"`
+}
