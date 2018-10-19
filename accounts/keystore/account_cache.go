@@ -165,4 +165,21 @@ func (ac *accountCache) delete(removed accounts.Account) {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
+	ac.all = removeAccount(ac.all, removed)
+	if ba := removeAccount(ac.byAddr[removed.Address], removed); len(ba) == 0 {
+		delete(ac.byAddr, removed.Address)
+	} else {
+		ac.byAddr[removed.Address] = ba
+	}
+
+}
+
+//accounts 函数返回账户缓存中的所有账户组成的列表
+func (ac *accountCache) accounts() []accounts.Account {
+	ac.maybeReload()
+	ac.mu.Lock()
+	defer ac.mu.Unlock()
+	cpy := make([]accounts.Account, len(ac.all))
+	copy(cpy, ac.all)
+	return cpy
 }

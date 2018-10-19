@@ -44,6 +44,7 @@ func NewPlaintextKeyStore(keydir string) *KeyStore {
 	return ks
 }
 
+//init 函数初始化KeyStore
 func (ks *KeyStore) init(keydir string) {
 	//锁定互斥锁，因为帐户缓存可能会调用事件
 	ks.mu.Lock()
@@ -61,5 +62,30 @@ func (ks *KeyStore) init(keydir string) {
 	for i := 0; i < len(accs); i++ {
 		ks.wallets[i] = &keystoreWallet{account: accs[i], keystore: ks}
 	}
+}
 
+//Wallets 实现了accounts.Backend的接口,返回所有的密钥文件.
+func (ks *KeyStore) Wallets() []accounts.Wallet {
+	ks.refreshWallets()
+
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+
+	cpy := make([]accounts.Wallet, len(ks.wallets))
+	copy(cpy, ks.wallets)
+	return cpy
+}
+
+//refreshWallets 检索当前帐户列表并基于此做任何必要的钱包刷新操作。
+func (ks *KeyStore) refreshWallets() {
+	//检索当前的账户列表
+	ks.cache.accounts()
+	accs := ks.cache.accounts()
+	// 将当前的账户列表转换为一个新的列表
+	wallets := make([]accounts.Wallet, 0, len(accs))
+	events := []accounts.WalletEvent{}
+
+	for _, account := range accs {
+		// acc
+	}
 }
