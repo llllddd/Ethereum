@@ -1,0 +1,175 @@
+package core
+
+import (
+	//	"container/heap"
+	"errors"
+	"time"
+	//	"sort"
+	"fmt"
+	"math/big"
+	"sync"
+	"xchain-go/common"
+	//	"xchain-go/core"
+	"xchain-go/core/basic"
+	"xchain-go/event"
+)
+
+var (
+	ErrTimestampTooLow   = errors.New("Time is too low")
+	ErrTimeError         = errors.New("Time is wrong")
+	ErrTimestampOutBound = errors.New("Time is out of bound")
+)
+
+var (
+	validDuration = big.NewInt(7200) //节点时间的有效范围
+)
+
+type TxPool struct {
+	//TODO: config,chainconfig,event相关
+	chain BlockChain
+	//currentState *state.StateDB             用来从区块链中查询当前状态TODO
+	//signer       types.signer               //获取交易的发送者址地TODO:
+	pending map[common.Address]*txList //存储对应账户的交易列表，由一个堆结构进行维护
+
+	//设置事件订阅，以是的交易可以广播至订阅此事件类型的信道
+	txFeed event.Feed              //订阅的入口
+	Scope  event.SubscriptionScope //追踪多个订阅者提供集中取消订阅的功能
+	wg     sync.WaitGroup          //定义同步等待的组
+	//读写锁	mu sync.RWMutex
+
+}
+
+//初始化txpool
+func NewTxPool(chain BlockChain) *TxPool {
+	pool := &TxPool{
+		chain:   chain,
+		pending: make(map[common.Address]*txList),
+		//	signer:  {}TODO
+	}
+	//	pool.reset(nil, chain.CurrentBlock().Header()) //初始化statedb
+	return pool
+}
+
+//初始化txpool中的statedb，并且去除已经在链上的交易。
+/*
+func (pool *TxPool) reset() {
+	statedb, err := pool.chain.StateAt(newHead.Root)
+	if err != nil {
+		log.Error("Failed to reset txpool state", "err", err)
+		return
+	}
+	pool.currentState = statedb
+}
+*/
+//获取节点时间TODO:
+func (pool *TxPool) getTime() (*big.Int, *big.Int) {
+	t := time.Now().UnixNano()
+	t_ := big.NewInt(t)
+	up := new(big.Int).Add(t_, validDuration)
+	down := new(big.Int).Sub(t_, validDuration)
+	return up, down
+}
+
+//验证交易,通过验证后的交易可放入pending
+func (pool *TxPool) validateTx(tx *basic.Transaction) error {
+	//获取交易的发送者地址TODO:
+	//from, err := types.Sender(pool.signer, tx)
+	//验证当前交易的时间戳与状态树中时间戳的大小
+	if pool.chain.currentBlock.Time().Cmp(tx.Timestamp()) != 1 {
+		return ErrTimestampTooLow
+	}
+	up, down := pool.getTime()
+	//if err != nil {
+	//	return ErrTimeError
+	//}
+	//确认交易的时间戳在时间范围内TODO:
+	if tx.Timestamp().Cmp(down) == -1 || tx.Timestamp().Cmp(up) == 1 {
+		return ErrTimestampOutBound
+	}
+	return nil
+}
+
+//向交易池中添加交易
+func (pool *TxPool) Add(tx *basic.Transaction) error {
+	//	from, err := types.Sender(pool.signer, tx)
+	//	if err != nil {
+	//		fmt.Println("Invalid Address")
+	//	}
+	from := *tx.To()
+	if pool.pending[from] == nil {
+		list := newtxList()
+		pool.pending[from] = list
+	}
+	if err := pool.validateTx(tx); err != nil {
+		fmt.Println("This transaction is invalid")
+		//	return error
+	}
+	pool.pending[from].Add(tx)
+	//向订阅了交易池的信道发送交易
+	pool.txFeed.Send(*tx)
+	return nil
+}
+
+//对pending中的交易进行过滤，去除无效的交易
+func (pool *TxPool) AddPending() error {
+	for addr, list := range pool.pending {
+		//TODO:
+		list.Forward(pool.chain.currentBlock.Time())
+		for _, tx := range list.items {
+			if err := pool.validateTx(tx); err != nil {
+				list.Remove(tx.Timestamp())
+				fmt.Println("invalid transaction")
+			}
+		}
+	}
+	return nil
+}
+
+//对交易池中的交易按照timestamp升序排序
+func (pool *TxPool) Pending() (map[common.Address]basic.Transactions, error) {
+	pending := make(map[common.Address]basic.Transactions)
+	for addr, list := range pool.pending {
+		pending[addr] = list.Flatten()
+	}
+	return pending, nil
+}
+
+//验证pending中的交易是否已经存在于区块链上
+/*
+func (pool *TxPool) demonteUnSave() error {
+	for addr, list := range pool.pending {
+		timestamp := pool.currentState.GetTimestamp(addr)
+		list.Forward(timestamp)
+	}
+	return nil
+}
+*/
+//返回有效的交易列表
+func (pool *TxPool) Ready() basic.Transactions {
+	//	if err := pool.demonteUnSave(); err != nil {
+	//		fmt.Println("Invalid tx in pending")
+	//	}
+
+	if err := pool.AddPending(); err != nil {
+		fmt.Println("Invalid tx in pending")
+	}
+
+	var ready basic.Transactions
+	for _, list := range pool.pending {
+		for _, tx := range list.Ready() {
+			ready = append(ready, tx)
+		}
+
+	}
+	return ready
+}
+
+//订阅交易
+func (pool *TxPool) SubscribeTx(ch chan basic.Transaction) event.Subscription {
+	return pool.Scope.Track(pool.txFeed.Subscribe(ch))
+}
+
+//停止所有信道的订阅
+func (pool *TxPool) Stop() {
+	pool.Scope.Close()
+}
