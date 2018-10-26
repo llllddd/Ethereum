@@ -3,8 +3,7 @@ package keystore
 import (
 	"time"
 
-	mylog "mylog2"
-
+	log "github.com/inconshreveable/log15"
 	"github.com/rjeczalik/notify"
 )
 
@@ -40,15 +39,14 @@ func (w *watcher) loop() {
 		w.starting = false
 		w.ac.mu.Unlock()
 	}()
-	logger := mylog.NewLogger(w.ac.keydir)
 
 	if err := notify.Watch(w.ac.keydir, w.ev, notify.All); err != nil {
-		logger.Infoln("监控密钥存储文件夹失败")
+		log.Info("监控密钥存储文件夹失败")
 		return
 	}
 	defer notify.Stop(w.ev)
-	logger.Infoln("开始监控密钥存储文件夹")
-	defer logger.Infoln("停止监控密钥存储文件夹")
+	log.Info("开始监控密钥存储文件夹")
+	defer log.Info("停止监控密钥存储文件夹")
 
 	w.ac.mu.Lock()
 	w.running = true
@@ -81,6 +79,6 @@ func (w *watcher) loop() {
 	}
 }
 
-func (w *wathcer) close() {
+func (w *watcher) close() {
 	close(w.quit)
 }

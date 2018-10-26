@@ -60,7 +60,6 @@ func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) 
 		return nil, fmt.Errorf("密钥和账户匹配错误: 错误地址 %x, 正确地址 %x", key.Address, addr)
 	}
 	return key, nil
-
 }
 
 func StoreKey(dir, auth string, scryptN, scryptP int) (common.Address, error) {
@@ -232,6 +231,11 @@ func getKDFKey(cryptoJSON cryptoJSON, auth string) ([]byte, error) {
 	}
 
 	if cryptoJSON.KDF == keyHeaderKDF {
+		// dkLen := cryptoJSON.KDFParams["dklen"].(int)
+		// n := cryptoJSON.KDFParams["n"].(int)
+		// p := cryptoJSON.KDFParams["p"].(int)
+		// r := cryptoJSON.KDFParams["r"].(int)
+		// return scrypt.Key(authArray, salt, n, r, p, dkLen)
 		dkLen := int(cryptoJSON.KDFParams["dklen"].(float64))
 		n := int(cryptoJSON.KDFParams["n"].(float64))
 		p := int(cryptoJSON.KDFParams["p"].(float64))

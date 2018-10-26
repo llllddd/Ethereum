@@ -3,22 +3,49 @@ package keystore
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 	"xchain-go/accounts"
 	"xchain-go/common"
-	"xchain-go/log"
+
+	log "github.com/inconshreveable/log15"
 
 	mapset "github.com/deckarep/golang-set"
 )
+
+var (
+	ErrNoMatch = errors.New("路径不匹配")
+)
+
+const minReloadInterval = 2 * time.Second
 
 type accountsByURL []accounts.Account
 
 func (s accountsByURL) Len() int           { return len(s) }
 func (s accountsByURL) Less(i, j int) bool { return s[i].URL.Cmp(s[j].URL) < 0 }
 func (s accountsByURL) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+
+type AmbiguousAddrError struct {
+	Addr    common.Address
+	Matches []accounts.Account
+}
+
+func (err *AmbiguousAddrError) Error() string {
+	files := ""
+	for i, a := range err.Matches {
+		files += a.URL.Path
+		if i < len(err.Matches)-1 {
+			files += ", "
+		}
+	}
+	return fmt.Sprintf("multiple keys match address (%s)", files)
+}
 
 //acountCache是密钥库中所有账户的实时索引
 type accountCache struct {
@@ -89,7 +116,7 @@ func (ac *accountCache) scanAccounts() error {
 	readAccount := func(path string) *accounts.Account {
 		fd, err := os.Open(path)
 		if err != nil {
-			log.Trace("打开密钥存储文件失败", "path", path, "err", err)
+			log.Info("打开密钥存储文件失败", "path", path, "err", err)
 			return nil
 		}
 		defer fd.Close()
@@ -131,7 +158,7 @@ func (ac *accountCache) scanAccounts() error {
 	case ac.notify <- struct{}{}:
 	default:
 	}
-	log.Trace("处理密钥文件的变更", "time", end.Sub(start))
+	log.Info("处理密钥文件的变更", "time", end.Sub(start))
 	return nil
 
 }
@@ -182,4 +209,74 @@ func (ac *accountCache) accounts() []accounts.Account {
 	cpy := make([]accounts.Account, len(ac.all))
 	copy(cpy, ac.all)
 	return cpy
+}
+
+// find 返回给定地址的账户.
+func (ac *accountCache) find(a accounts.Account) (accounts.Account, error) {
+	//限制搜索范围为候选者地址
+	matches := ac.all
+	if (a.Address != common.Address{}) {
+		matches = ac.byAddr[a.Address]
+	}
+	//如果指定了basename,将路径补充完整
+	if a.URL.Path != "" {
+		if !strings.ContainsRune(a.URL.Path, filepath.Separator) {
+			a.URL.Path = filepath.Join(ac.keydir, a.URL.Path)
+		}
+		for i := range matches {
+			if matches[i].URL == a.URL {
+				return matches[i], nil
+			}
+		}
+		if (a.Address == common.Address{}) {
+			return accounts.Account{}, ErrNoMatch
+		}
+
+	}
+	switch len(matches) {
+	case 1:
+		return matches[0], nil
+	case 0:
+		return accounts.Account{}, ErrNoMatch
+	default:
+		err := &AmbiguousAddrError{Addr: a.Address, Matches: make([]accounts.Account, len(matches))}
+		copy(err.Matches, matches)
+		sort.Sort(accountsByURL(err.Matches))
+		return accounts.Account{}, err
+	}
+}
+
+func (ac *accountCache) add(newAccount accounts.Account) {
+	ac.mu.Lock()
+	defer ac.mu.Unlock()
+
+	i := sort.Search(len(ac.all), func(i int) bool { return ac.all[i].URL.Cmp(newAccount.URL) >= 0 })
+	if i < len(ac.all) && ac.all[i] == newAccount {
+		return
+	}
+	//新账户不在缓存中
+	ac.all = append(ac.all, accounts.Account{})
+	copy(ac.all[i+1:], ac.all[i:])
+	ac.all[i] = newAccount
+	ac.byAddr[newAccount.Address] = append(ac.byAddr[newAccount.Address], newAccount)
+}
+
+func (ac *accountCache) close() {
+	ac.mu.Lock()
+	ac.watcher.close()
+	if ac.throttle != nil {
+		ac.throttle.Stop()
+	}
+	if ac.notify != nil {
+		close(ac.notify)
+		ac.notify = nil
+	}
+	ac.mu.Unlock()
+}
+
+func (ac *accountCache) hasAddress(addr common.Address) bool {
+	ac.maybeReload()
+	ac.mu.Lock()
+	defer ac.mu.Unlock()
+	return len(ac.byAddr[addr]) > 0
 }

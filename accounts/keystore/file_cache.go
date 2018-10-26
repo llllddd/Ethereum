@@ -2,7 +2,6 @@ package keystore
 
 import (
 	"io/ioutil"
-	mylog "mylog2"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	mapset "github.com/deckarep/golang-set"
+	log "github.com/inconshreveable/log15"
 )
 
 //fileCache是在密钥库扫描过程中得到的文件的缓存。
@@ -33,14 +33,13 @@ func (fc *fileCache) scan(keyDir string) (mapset.Set, mapset.Set, mapset.Set, er
 	defer fc.mu.Unlock()
 
 	all := mapset.NewThreadUnsafeSet()
-	mod := mapset.NewThreadUnsafeSet()
+	mods := mapset.NewThreadUnsafeSet()
 
 	var newLastMod time.Time
 	for _, fi := range files {
 		path := filepath.Join(keyDir, fi.Name())
 		if nonKeyFile(fi) {
-			log := mylog.NewLogger()
-			log.Infoln("当前文件夹下没有密钥存储文件", path)
+			log.Info("当前文件夹下没有密钥存储文件", "path", path)
 			continue
 		}
 		all.Add(path)
@@ -56,10 +55,21 @@ func (fc *fileCache) scan(keyDir string) (mapset.Set, mapset.Set, mapset.Set, er
 	t2 := time.Now()
 
 	deletes := fc.all.Difference(all)
+
+	//更新追踪的文件返回文件集合
+	deletes = fc.all.Difference(all)
+	creates := all.Difference(fc.all)
+	updates := mods.Difference(creates)
+
+	fc.all, fc.lastMod = all, newLastMod
+	t3 := time.Now()
+
+	log.Debug("FS scan times", "list", t1.Sub(t0), "set", t2.Sub(t1), "diff", t3.Sub(t2))
+	return creates, deletes, updates, nil
 }
 
 //nonKeyFile 忽视备份文件,隐藏文件和链接文件.
-func (fc *fileCache) nonKeyFile(fi os.FileInfo) bool {
+func nonKeyFile(fi os.FileInfo) bool {
 	//跳过隐藏文件和备份文件
 	if strings.HasSuffix(fi.Name(), "~") || strings.HasPrefix(fi.Name(), ".") {
 		return true

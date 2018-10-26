@@ -10,17 +10,16 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+	"xchain-go/accounts"
 	"xchain-go/common"
 	"xchain-go/crypto"
-
-	"xchain-go/accounts"
 
 	"github.com/pborman/uuid"
 )
 
 const (
 	version        = 1
-	KeyStoreScheme = "keystore"
+	KeyStoreScheme = "XChain"
 )
 
 type Key struct {
@@ -69,7 +68,7 @@ type cipherparamsJSON struct {
 	IV string `json:"iv"`
 }
 
-//对密钥文件的编码和解码
+//MarshalJSON 对密钥文件进行JSON编码
 func (k *Key) MarshalJSON() ([]byte, error) {
 	jStruct := plainKeyJSON{
 		hex.EncodeToString(k.Address[:]),
@@ -81,6 +80,7 @@ func (k *Key) MarshalJSON() ([]byte, error) {
 	return j, err
 }
 
+//UnmarshalJSON 对密钥文件进行JSON解码
 func (k *Key) UnmarshalJSON(j []byte) error {
 	keyJSON := new(plainKeyJSON)
 	err := json.Unmarshal(j, &keyJSON)
@@ -173,7 +173,7 @@ func writeKeyFile(file string, content []byte) error {
 	return os.Rename(name, file)
 }
 
-// 文件名格式
+//keyFileName 定义密钥文件名称
 func keyFileName(keyAddr common.Address) string {
 	ts := time.Now().UTC()
 	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(keyAddr[:]))
@@ -196,3 +196,23 @@ func zeroKey(k *ecdsa.PrivateKey) {
 		b[i] = 0
 	}
 }
+
+/*
+func NewKeyForDirectICAP(rand io.Reader) *Key {
+	randBytes := make([]byte, 64)
+	_, err := rand.Read(randBytes)
+	if err != nil {
+		panic("key generation: could not read from random source: " + err.Error())
+	}
+	reader := bytes.NewReader(randBytes)
+	privateKeyECDSA, err := ecdsa.GenerateKey(crypto.S256(), reader)
+	if err != nil {
+		panic("key generation: ecdsa.GenerateKey failed: " + err.Error())
+	}
+	key := newKeyFromECDSA(privateKeyECDSA)
+	if !strings.HasPrefix(key.Address.Hex(), "0x00") {
+		return NewKeyForDirectICAP(rand)
+	}
+	return key
+}
+*/
