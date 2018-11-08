@@ -10,6 +10,12 @@
 ;;     go get github.com/rogpeppe/godef
 ;;     go get github.com/nsf/gocode
 
+;;Cancel auto save
+;;(setq auto-save-default nil)
+
+;;Cancel auto backup
+;;(setq auto-backup-files nil)
+
 (require 'package)
 (add-to-list 'package-archives
          '("melpa" . "http://melpa.milkbox.net/packages/") t)
@@ -38,22 +44,23 @@
 (add-hook 'go-mode-hook 'company-mode)
 
 
-(custom-set-variables
+ ;;(custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(package-selected-packages '(go-autocomplete go-eldoc company-go)))
-(custom-set-faces
+ ;; '(package-selected-packages '(go-autocomplete go-eldoc company-go)))
+ ;;(custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- )
+ ;;)
 
 (global-linum-mode 1) ; always show line numbers                              
 (setq linum-format "%d| ")  ;set format
- ;; flymake mode is used to check the synax error 
+
+;; flymake mode is used to check the synax error 
 (add-hook 'flymake-mode-hook
       (lambda()
         (local-set-key (kbd "C-c C-e n") 'flymake-goto-next-error)))
@@ -63,3 +70,18 @@
 (add-hook 'flymake-mode-hook
       (lambda()
         (local-set-key (kbd "C-c C-e m") 'flymake-popup-current-error-menu)))
+
+;; change the theme
+(load-theme 'monokai t)
+
+(company-quickhelp-mode)
+;;(setq company-quickhelp-delay t)
+(eval-after-load 'company
+  '(define-key company-active-map (kbd "C-c h") #'company-quickhelp-manual-begin))
+
+;;(add-to-list 'load-path "~/.emacs.d/")
+;;(require 'go-autocomplete)
+;;(require 'auto-complete-config)
+;;(ac-config-default)
+;;Also you could setup any combination (for example M-TAB)
+;;for invoking auto-complete:
