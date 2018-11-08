@@ -1,9 +1,17 @@
 ;; from https://www.youtube.com/watch?v=r6j2W5DZRtA
 ;; get the following packages ("M-x package-list-packages"):
-;;     go-mode
-;;     go-eldoc
 ;;     company-mode
 ;;     company-go
+;;     company-quickhelp
+;;     flymake-go
+;;     go-eldoc
+;;     go-autocomplete
+;;     monokai-theme
+;;     auto-complete    dependency
+;;     company          dependency
+;;     popup            dependency
+;;     go-mode          dependency
+;;     pos-tip          dependency
 ;; get the following go programs (run each line in your shell):
 ;;     go get golang.org/x/tools/cmd/godoc
 ;;     go get golang.org/x/tools/cmd/goimports
