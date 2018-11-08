@@ -1,0 +1,60 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include "sign.h"
+
+
+#define CRYPTO_PUBLICKEYBYTES 896U
+#define CRYPTO_SECRETKEYBYTES 2096U
+#define CRYPTO_BYTES 1487U
+
+int main(){
+    unsigned char pk[CRYPTO_PUBLICKEYBYTES],sk[CRYPTO_SECRETKEYBYTES];
+    unsigned char *m, *sm,*m1;
+    unsigned long long mlen ,smlen,m1len;
+
+    int ret_val;
+    if ((ret_val = crypto_sign_keypair(pk,sk))!=0){
+        return 1;
+    }
+    int print;
+        for (print=0;print<CRYPTO_PUBLICKEYBYTES;print++){
+            printf("%X",pk[print]);
+        }
+    printf("---------------------------密钥----------------------------\n");
+    
+    int print1;
+        for (print1=0;print1<CRYPTO_SECRETKEYBYTES;print1++){
+            printf("%X",sk[print1]);
+    }
+
+    unsigned char mm[16] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+    m  = mm;
+    mlen = 16;
+
+    sm = (unsigned char *)calloc(mlen+CRYPTO_BYTES,sizeof(unsigned char));
+    m1 = (unsigned char *)calloc(mlen+CRYPTO_BYTES,sizeof(unsigned char));
+    int sign_val;
+    if ((sign_val=crypto_sign(sm,&smlen,mm,mlen,sk))!=0){
+        return 1;
+    }
+
+    printf("----------------------------签名---------------------------\n");
+    int print2;
+    for(print2=0;print2<(mlen);print2++){
+        printf("%X",sm[print2]);
+    }
+    printf("----------------------------验签---------------------------\n");
+    int ver_val;
+    if((ver_val=crypto_sign_open(m1,&m1len,sm,smlen,pk))==0){
+        printf("Success");
+    }else{
+        printf("failed");
+    }
+
+    int print3;
+    for(print3=0;print3<(mlen);print3++){
+      printf("%d",m1[print3]);
+    }
+}

@@ -1,0 +1,11 @@
+CC = /usr/bin/cc
+CFLAGS = -Wall -Wextra -march=native -mtune=native -O3 -fomit-frame-pointer
+NISTFLAGS = -O3 -fomit-frame-pointer -march=native -fPIC
+SOURCES = sign.c polyvec.c packing.c poly.c reduce.c ntt.c rounding.c fips202.c
+HEADERS = api.h params.h sign.h polyvec.h packing.h poly.h reduce.h ntt.h \
+  rounding.h fips202.h
+
+all: PQCgenKAT_sign
+
+PQCgenKAT_sign: $(SOURCES) rng.c PQCgenKAT_sign.c $(HEADERS) rng.h
+	$(CC) $(SOURCES) rng.c PQCgenKAT_sign.c -o tesss
